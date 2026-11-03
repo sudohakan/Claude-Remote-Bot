@@ -53,7 +53,7 @@ class TestCredentialSanitizer:
         assert self.sanitizer.sanitize("") == ""
 
     def test_masks_env_assignment(self):
-        text = "TOKEN=abcdefghijklmnop123"
+        text = "TOKEN=abcdefghijklmnop123"  # gitleaks:allow
         result = self.sanitizer.sanitize(text)
         assert "abcdefghijklmnop123" not in result
 

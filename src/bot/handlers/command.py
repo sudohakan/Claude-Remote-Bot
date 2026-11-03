@@ -1262,8 +1262,14 @@ async def cmd_epic(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
         "🎮 Taze Epic linki üretiliyor (birkaç saniye)...", parse_mode="HTML"
     )
 
-    py = "/home/hakan/.local/share/pipx/venvs/playwright/bin/python"
-    script = "/home/hakan/.claude/skills/epic-free-game-claim/claim.py"
+    py = os.environ.get(
+        "EPIC_CLAIM_PYTHON",
+        os.path.expanduser("~/.local/share/pipx/venvs/playwright/bin/python"),
+    )
+    script = os.environ.get(
+        "EPIC_CLAIM_SCRIPT",
+        os.path.expanduser("~/.claude/skills/epic-free-game-claim/claim.py"),
+    )
     try:
         proc = await _asyncio.create_subprocess_exec(
             py,

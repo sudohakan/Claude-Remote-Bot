@@ -8,11 +8,11 @@
 
 SDK-first AI bridge · invite-token auth · SSH tunnel management · system monitoring · cost controls
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue?style=flat-square)](CHANGELOG.md)
+[![Release](https://img.shields.io/github/v/release/sudohakan/Claude-Remote-Bot?style=flat-square)](https://github.com/sudohakan/Claude-Remote-Bot/releases)
 [![Python](https://img.shields.io/badge/python-3.12%2B-brightgreen?style=flat-square)](https://python.org)
 [![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
-[![CI](https://img.shields.io/github/actions/workflow/status/sudohakan/claude-remote-bot/ci.yml?style=flat-square&label=CI)](https://github.com/sudohakan/claude-remote-bot/actions)
-[![Stars](https://img.shields.io/github/stars/sudohakan/claude-remote-bot?style=flat-square)](https://github.com/sudohakan/claude-remote-bot/stargazers)
+[![CI](https://img.shields.io/github/actions/workflow/status/sudohakan/Claude-Remote-Bot/ci.yml?style=flat-square&label=CI)](https://github.com/sudohakan/Claude-Remote-Bot/actions)
+[![Stars](https://img.shields.io/github/stars/sudohakan/Claude-Remote-Bot?style=flat-square)](https://github.com/sudohakan/Claude-Remote-Bot/stargazers)
 
 [Quick Start](#install) · [Features](#features) · [Commands](#usage) · [Architecture](#architecture) · [Configuration](#configuration) · [Contributing](#development)
 
@@ -31,7 +31,7 @@ SDK-first AI bridge · invite-token auth · SSH tunnel management · system moni
 | **SSH tunnel management** | ngrok lifecycle with health polling, auto-restart, retry limits, and admin alerts |
 | **System monitoring** | CPU, RAM, disk metrics via psutil; anomaly detection with configurable thresholds |
 | **File and image uploads** | Send code, archives (zip/tar), and images directly to Claude for analysis |
-| **Cost tracking** | Per-request and per-user monthly caps enforced mid-stream |
+| **Cost tracking** | Per-request cap plus a per-user daily cap, adjustable per user with `/limit` |
 | **Session export** | Export chat history as Markdown, JSON, or HTML |
 | **Credential sanitizer** | All Claude output is scrubbed for AWS keys, GitHub tokens, secrets before delivery |
 | **Anti-spam notifications** | State-change-only alerts, dedup windows, optional hourly reports |
@@ -49,7 +49,7 @@ Get your user ID from [@userinfobot](https://t.me/userinfobot).
 **2. Clone and configure**
 
 ```bash
-git clone https://github.com/sudohakan/claude-remote-bot.git
+git clone https://github.com/sudohakan/Claude-Remote-Bot.git
 cd claude-remote-bot
 cp .env.example .env
 # Set TELEGRAM_BOT_TOKEN and ADMIN_TELEGRAM_ID
@@ -118,9 +118,9 @@ All commands are audit-logged to SQLite with timestamp, user ID, and action.
 
 ### Cost Controls
 
-Two independent caps enforced by `CostTracker`:
-- **Per-request**: rejects mid-stream if `CLAUDE_MAX_COST_PER_REQUEST` exceeded
-- **Per-user monthly**: blocks the user until monthly reset
+Two independent caps:
+- **Per-request**: a request stops once it exceeds `CLAUDE_MAX_COST_PER_REQUEST`
+- **Per-user daily**: a non-admin user is blocked for the rest of the day after spending their cap. The cap is the user's own value set with `/limit`, else `CLAUDE_DEFAULT_USER_COST_LIMIT`, else `CLAUDE_MAX_COST_PER_USER`; a negative value means unlimited. Admins are exempt.
 
 ### System Monitoring
 
@@ -158,6 +158,8 @@ Silent by default. State-change-only firing, 5-minute dedup windows, one startup
 | `/ssh` | SSH tunnel info and connection details |
 | `/history` | Recent command history |
 | `/about` | Bot info and version |
+| `/cwd` | Current working directory |
+| `/remote` | Active remote-control sessions |
 
 ### Admin Only
 
@@ -165,11 +167,26 @@ Silent by default. State-change-only firing, 5-minute dedup windows, one startup
 |:--------|:------------|
 | `/invite` | Generate a single-use invite token |
 | `/users` | List all registered users |
-| `/stats` | 24-hour system statistics |
+| `/promote <user_id>` | Promote a user to admin |
+| `/demote <user_id> [user\|viewer]` | Demote a user |
+| `/revoke <token>` | Revoke an unused invite |
+| `/limit [<user_id> <usd\|off\|reset>]` | List daily cost caps, or set one user's cap |
+| `/stats` | 24-hour usage statistics |
 | `/alerts [on\|off]` | Toggle hourly system reports |
-| `/broadcast <msg>` | Message all users |
-| `/tunnel restart` | Force-restart ngrok tunnel |
 | `/sessions` | List active Claude sessions |
+
+### Optional integrations (owner only)
+
+These commands call external tools from the owner's own setup. Each one only works when its target exists; point them elsewhere with the variables below.
+
+| Command | Calls | Variable |
+|:--------|:------|:---------|
+| `/auto <task>` | Autonomy queue CLI: adds a one-shot job, `/auto durum <id>` shows its runs | `AUTONOMY_CLI` (default `~/.local/bin/auto`) |
+| `/j <message>` | Relays a message to a leader agent session through its CLI | `JARVIS_CLI` (default `~/.local/bin/jarvis`) |
+| `/ack` | Acknowledges that agent's escalation so it stops repeating | `JARVIS_CLI` |
+| `/epic` | Runs a free-game claim script and sends a fresh link | `EPIC_CLAIM_SCRIPT`, `EPIC_CLAIM_PYTHON` |
+
+Approve / Reject buttons under an agent's approval request call `JARVIS_CLI approve|reject <id>`.
 
 ---
 
@@ -259,8 +276,11 @@ All settings loaded from `.env`. Copy `.env.example` to get started.
 | `ANTHROPIC_API_KEY` | -- | API key. Falls back to `claude` CLI if unset |
 | `CLAUDE_MODEL` | SDK default | Model override (any model id the SDK accepts, e.g. a `sonnet` alias) |
 | `CLAUDE_MAX_TURNS` | `10` | Max agentic turns per request |
-| `CLAUDE_TIMEOUT_SECONDS` | `120` | Per-request timeout |
-| `CLAUDE_MAX_COST_PER_USER` | `5.0` | Monthly cost cap per user (USD) |
+| `CLAUDE_TIMEOUT_SECONDS` | `600` | Per-request timeout |
+| `CLAUDE_MAX_COST_PER_USER` | `5.0` | Fallback daily cost cap per non-admin user (USD) |
+| `CLAUDE_DEFAULT_USER_COST_LIMIT` | -- | Default daily cap for users without their own; negative = unlimited |
+| `CLAUDE_CLI_PATH` | `claude` on PATH | Path to the `claude` CLI |
+| `SESSION_TIMEOUT_HOURS` | `24` | Idle time before a Claude session is dropped |
 | `CLAUDE_MAX_COST_PER_REQUEST` | `1.0` | Per-request cost cap (USD) |
 | `AGENTIC_MODE` | `true` | Multi-turn agentic execution |
 
@@ -292,6 +312,7 @@ All settings loaded from `.env`. Copy `.env.example` to get started.
 | `ALERT_CPU_PERCENT` | `90` | CPU alert threshold |
 | `ALERT_RAM_PERCENT` | `85` | RAM alert threshold |
 | `ALERT_DISK_PERCENT` | `90` | Disk alert threshold |
+| `ALERT_SSH_FAILURES_PER_MIN` | `5` | Failed SSH logins per minute before an alert |
 
 ### Feature Flags
 
@@ -301,6 +322,16 @@ All settings loaded from `.env`. Copy `.env.example` to get started.
 | `ENABLE_GIT_INTEGRATION` | `true` | Read-only git commands |
 | `ENABLE_API_SERVER` | `false` | FastAPI HTTP server |
 | `ENABLE_VOICE_MESSAGES` | `false` | Voice message processing |
+| `ENABLE_QUICK_ACTIONS` | `true` | Context-aware inline buttons |
+
+### Storage and logging
+
+| Variable | Default | Description |
+|:---------|:-------:|:------------|
+| `DATABASE_URL` | `sqlite:///data/bot.db` | SQLite database |
+| `API_SERVER_PORT` | `8080` | Port for the optional FastAPI server |
+| `LOG_LEVEL` | `INFO` | Log level |
+| `DEBUG` | `false` | Debug mode |
 
 ---
 
@@ -337,7 +368,7 @@ All settings loaded from `.env`. Copy `.env.example` to get started.
 See [CONTRIBUTING.md](CONTRIBUTING.md) for full guidelines.
 
 ```bash
-git clone https://github.com/sudohakan/claude-remote-bot.git
+git clone https://github.com/sudohakan/Claude-Remote-Bot.git
 cd claude-remote-bot
 pip install -e ".[dev]"
 pytest

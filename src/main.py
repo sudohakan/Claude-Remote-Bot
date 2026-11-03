@@ -26,7 +26,7 @@ from src.storage.facade import StorageFacade
 
 logger = structlog.get_logger(__name__)
 
-_VERSION = "1.0.0"
+_VERSION = "1.2.0"
 
 
 def run() -> None:

@@ -1,0 +1,2 @@
+# Fake fixture in the sanitizer test (not a credential), as committed in 48bacf1
+48bacf149b748aec7d8f1011b2fdd8c724b158d0:tests/test_claude_bridge.py:generic-api-key:58

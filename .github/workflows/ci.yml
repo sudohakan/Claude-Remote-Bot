@@ -25,6 +25,14 @@ jobs:
           pip install black isort flake8 mypy
           pip install -e .
 
+      - name: Version check
+        run: |
+          v=$(cat VERSION)
+          grep -q "^version = \"$v\"" pyproject.toml
+          grep -q "_VERSION = \"$v\"" src/main.py
+          grep -q "__version__ = \"$v\"" src/__init__.py
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then [ "${GITHUB_REF#refs/tags/v}" = "$v" ]; fi
+
       - name: black (format check)
         run: black --check src tests
 

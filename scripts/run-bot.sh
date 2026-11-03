@@ -10,8 +10,8 @@ export CLAUDE_WSL_BIN="$NPM_GLOBAL/bin/claude"
 # Bot subprocess spawn ettiğinde peer network'e otomatik subscribe olsun
 [ -f "$HOME/.claude-fn.sh" ] && . "$HOME/.claude-fn.sh"
 
-LOG_FILE="/mnt/c/dev/claude-telegram-bot/data/bot.log"
-BOT_DIR="/mnt/c/dev/claude-telegram-bot"
+BOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+LOG_FILE="$BOT_DIR/data/bot.log"
 VENV="$BOT_DIR/.venv/bin/python3"
 
 mkdir -p "$BOT_DIR/data"

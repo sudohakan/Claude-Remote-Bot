@@ -26,7 +26,7 @@ _semaphore: asyncio.Semaphore = asyncio.Semaphore(_CONCURRENT_LIMIT)
 # Isolated HOME for non-admin Claude subprocess. Keeps the host's
 # ~/.claude/ hooks, plugins, MCP servers, and Bitwarden vault injection
 # out of guest sessions. Admin (full_access=True) keeps the real HOME.
-_SANDBOX_HOME = "/home/hakan/.claude-bot-sandbox"
+_SANDBOX_HOME = os.path.expanduser("~/.claude-bot-sandbox")
 
 
 @dataclass

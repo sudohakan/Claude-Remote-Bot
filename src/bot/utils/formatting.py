@@ -152,7 +152,7 @@ async def send_claude_reply(
 
     chunks = split_message(content or "(no response)")
     for index, raw in enumerate(chunks):
-        # every part names its sender: Jarvis and services write to Hakan on this bot too
+        # every part names its sender: other agents and services write to the owner on this bot too
         chunk = labelled(raw, BOT_SESSION)
         rendered = labelled(claude_to_telegram_html(raw), BOT_SESSION, html=True)
         try:

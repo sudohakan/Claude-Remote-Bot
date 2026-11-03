@@ -18,8 +18,8 @@ from telegram.ext import ContextTypes
 from src.bot.utils import messages as M
 from src.bot.utils.formatting import escape_html
 
-AUTO_BIN = os.environ.get("AUTONOMY_CLI", "/home/hakan/.local/bin/auto")
-JARVIS_BIN = os.environ.get("JARVIS_CLI", "/home/hakan/.local/bin/jarvis")
+AUTO_BIN = os.environ.get("AUTONOMY_CLI", os.path.expanduser("~/.local/bin/auto"))
+JARVIS_BIN = os.environ.get("JARVIS_CLI", os.path.expanduser("~/.local/bin/jarvis"))
 DEFAULT_AREA = "claude-stack"
 AUTO_TIMEOUT_SEC = 60
 TITLE_MAX = 80

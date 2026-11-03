@@ -142,7 +142,7 @@ class BotOrchestrator:
         # Unknown slash commands → Claude passthrough (preserves leading "/")
         # Known commands above already consume their updates; only unmatched
         # /foo reaches here and is forwarded verbatim so Claude can dispatch
-        # native slash commands (/dreamy, /loop, /team, /finekra-task, ...).
+        # native slash commands (/loop, /team, /review, ...).
         app.add_handler(MessageHandler(filters.COMMAND, handle_message))
 
         # Text messages → Claude (must be last)

@@ -7,7 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-03
+
 ### Added
+- `/j <mesaj>` (owner only) relays a message to a leader agent session through its CLI; edited messages are ignored and control characters stripped.
+- Approve / Reject buttons under an agent's approval request call `approve|reject <id>` on that CLI.
+- Every message the bot sends on its own names its sender in a bold first line; bot notifications pass a shared humanizer.
+- `/epic`, `/cwd`, `/remote`, `/promote`, `/demote`, `/revoke`, `/limit` (per-user daily cost cap) are documented.
+- CI checks that `VERSION`, `pyproject.toml`, `src/main.py` and `src/__init__.py` carry the same version, and that a tag matches it.
 - `/auto <iş>` (owner only; promoted admins are refused) puts a one-off task on the Claude autonomy queue as a oneshot job; `alan:<id>` picks the area, `/auto durum <id>` shows its runs. The bot writes no authority or human-only field, the area policy decides.
 - `/ack` (owner only) runs `jarvis ack`: a Jarvis escalation seen on Telegram stops its ladder.
 
@@ -18,6 +25,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Inline-keyboard buttons (`/new`, `/status`, `/help`) no longer crash on callback updates, which carry no `message`.
 - A user whose access was revoked can no longer drive commands through old keyboards.
 - A timed-out `claude` subprocess is killed instead of left running; `--resume` is only passed once Claude has actually started the session.
+- Hardcoded home-directory paths are gone: integration CLIs and scripts default to `~` and can be set with `AUTONOMY_CLI`, `JARVIS_CLI`, `EPIC_CLAIM_SCRIPT`, `EPIC_CLAIM_PYTHON`; `scripts/run-bot.sh` locates the repo from its own path.
+- `.env.example` used `MONITOR_ENABLED`, which the settings never read; it is `ENABLE_MONITOR`.
+- README matched to the code: removed `/broadcast` and `/tunnel` (never registered), cost cap is daily not monthly, default timeout is 600 s, missing variables listed.
+
+## [1.1.0] - 2026-06-09
+
+### Fixed
+- Duplicate config field and tunnel validation.
+- The ngrok token is passed through an environment variable instead of a CLI argument.
 
 ---
 

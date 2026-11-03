@@ -1,5 +1,5 @@
-"""First line of every message the bot sends on its own or for its Claude session: Hakan's Telegram also gets
-Jarvis and service messages on this bot, and the line tells them apart (same rule as ~/.claude/scripts/lib/tg_send.py).
+"""First line of every message the bot sends on its own or for its Claude session: the owner's chat also gets
+messages from other agents and services through this bot, and the line tells them apart.
 The shared humanizer keeps this line unchanged."""
 
 BOT_SESSION = "Telegram botu (Claude oturumu):"
