@@ -7,7 +7,7 @@ export NPM_GLOBAL="$HOME/.npm-global"
 export PATH="$NPM_GLOBAL/bin:$PATH"
 export CLAUDE_WSL_BIN="$NPM_GLOBAL/bin/claude"
 
-# Bot subprocess spawn ettiğinde peer network'e otomatik subscribe olsun
+# Subprocesses spawned by the bot subscribe to the peer network automatically
 [ -f "$HOME/.claude-fn.sh" ] && . "$HOME/.claude-fn.sh"
 
 BOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

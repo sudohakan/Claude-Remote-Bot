@@ -881,7 +881,7 @@ async def cmd_remote(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
     except Exception:
         lines.append("⚡ <b>Active Claude sessions:</b> ?")
 
-    # 2. Tmux session'ları (attached/unattached)
+    # 2. Tmux sessions (attached/unattached)
     try:
         result = subprocess.run(
             [

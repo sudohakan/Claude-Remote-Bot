@@ -98,6 +98,10 @@ journalctl --user -u claude-remote-bot -f
 
 ---
 
+## Language
+
+The bot talks to its users in Turkish: replies, command help and prompts are a Turkish UI. Code, comments and docs are English.
+
 ## Features
 
 ### Claude Integration
