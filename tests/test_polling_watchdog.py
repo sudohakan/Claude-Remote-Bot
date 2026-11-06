@@ -53,9 +53,9 @@ async def test_exits_when_polling_task_dead():
 async def test_heartbeat_logged_while_healthy(capsys):
     clock = FakeClock()
     liveness = PollingLiveness(clock)
-    steps = [liveness.mark_success] * 5 + [lambda: setattr(clock, "now", clock.now + 999)]
-    exits = await _run(
-        clock, liveness, steps, stall_seconds=300, heartbeat_seconds=120
-    )
+    steps = [liveness.mark_success] * 5 + [
+        lambda: setattr(clock, "now", clock.now + 999)
+    ]
+    exits = await _run(clock, liveness, steps, stall_seconds=300, heartbeat_seconds=120)
     assert exits == [3]
     assert "polling.heartbeat" in capsys.readouterr().out
