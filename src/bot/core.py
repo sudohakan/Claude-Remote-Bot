@@ -24,6 +24,7 @@ from telegram.ext import (
 from src.config.settings import Settings
 
 from .orchestrator import BotOrchestrator
+from .polling_watchdog import LivenessRequest, PollingLiveness, watch_polling
 
 logger = structlog.get_logger(__name__)
 
@@ -36,6 +37,8 @@ class RemoteBot:
         self._deps = {**deps, "settings": settings}
         self._app: Optional[Application] = None
         self._running = False
+        self._liveness = PollingLiveness()
+        self._watchdog: Optional[asyncio.Task] = None
 
     # ── Build ─────────────────────────────────────────────────────────────────
 
@@ -54,6 +57,9 @@ class RemoteBot:
             .connect_timeout(30)
             .read_timeout(30)
             .write_timeout(30)
+            .get_updates_request(
+                LivenessRequest(self._liveness, connection_pool_size=1, read_timeout=30)
+            )
         )
 
         self._app = builder.build()
@@ -102,6 +108,14 @@ class RemoteBot:
             drop_pending_updates=True,
         )
 
+        self._liveness.mark_success()
+        self._watchdog = asyncio.create_task(
+            watch_polling(
+                self._liveness,
+                polling_task_done=lambda: self._polling_task_done(),
+            )
+        )
+
         try:
             while self._running:
                 await asyncio.sleep(1)
@@ -112,7 +126,14 @@ class RemoteBot:
         """Signal the main loop to exit."""
         self._running = False
 
+    def _polling_task_done(self) -> bool:
+        # PTB keeps the task in a name-mangled private attribute; absent → unknown.
+        task = getattr(self._app.updater, "_Updater__polling_task", None)
+        return task is not None and task.done()
+
     async def _shutdown(self) -> None:
+        if self._watchdog:
+            self._watchdog.cancel()
         if self._app:
             if self._app.updater.running:
                 await self._app.updater.stop()
