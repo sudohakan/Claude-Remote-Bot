@@ -1,61 +1,44 @@
 <div align="center">
 
-<img src="https://img.shields.io/badge/Claude%20Remote%20Bot-Telegram%20%C3%97%20Claude%20Code-blueviolet?style=for-the-badge&logo=telegram&logoColor=white" alt="Claude Remote Bot" />
-
 # Claude Remote Bot
 
-**Secure multi-user remote access to Claude Code via Telegram.**
+**Secure multi-user remote access to Claude Code through Telegram.**
 
-SDK-first AI bridge · invite-token auth · SSH tunnel management · system monitoring · cost controls
-
+[![CI](https://github.com/sudohakan/Claude-Remote-Bot/actions/workflows/ci.yml/badge.svg)](https://github.com/sudohakan/Claude-Remote-Bot/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/sudohakan/Claude-Remote-Bot?style=flat-square)](https://github.com/sudohakan/Claude-Remote-Bot/releases)
-[![Python](https://img.shields.io/badge/python-3.12%2B-brightgreen?style=flat-square)](https://python.org)
 [![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
-[![CI](https://img.shields.io/github/actions/workflow/status/sudohakan/Claude-Remote-Bot/ci.yml?style=flat-square&label=CI)](https://github.com/sudohakan/Claude-Remote-Bot/actions)
-[![Stars](https://img.shields.io/github/stars/sudohakan/Claude-Remote-Bot?style=flat-square)](https://github.com/sudohakan/Claude-Remote-Bot/stargazers)
-
-[Quick Start](#install) · [Features](#features) · [Commands](#usage) · [Architecture](#architecture) · [Configuration](#configuration) · [Contributing](#development)
+[![Python](https://img.shields.io/badge/python-3.12%2B-brightgreen?style=flat-square)](https://python.org)
 
 </div>
 
----
+## Features
 
-## What it does
+Send a message from your phone, get Claude Code responses back. Manage SSH tunnels, monitor your system, upload files for analysis and export sessions, all from Telegram, with role-based access and cost controls built in.
 
-> Send a message from your phone, get Claude Code responses back. Manage SSH tunnels, monitor your system, upload files for analysis, export sessions: all from Telegram, with role-based access and cost controls baked in.
+- **Claude Agent SDK integration**: SDK-first with automatic CLI fallback. With `ANTHROPIC_API_KEY` set the bot uses the SDK directly, otherwise it shells out to the `claude` CLI. Multi-turn agentic mode is on by default with turn limits and timeouts.
+- **Multi-user auth**: admin generates single-use invite tokens with `/invite`, users redeem them with `/start <token>`. Roles: `admin` (full control), `user` (chat, status, own sessions, uploads), `viewer` (read-only). Every command is audit-logged to SQLite.
+- **Cost controls**: a per-request cap (`CLAUDE_MAX_COST_PER_REQUEST`) and a per-user daily cap. The daily cap is the user's own value set with `/limit`, else `CLAUDE_DEFAULT_USER_COST_LIMIT`, else `CLAUDE_MAX_COST_PER_USER`; a negative value means unlimited. Admins are exempt.
+- **SSH tunnel management**: ngrok lifecycle with health polling, auto-restart, retry limits and admin alerts on up, down and retry-exhausted.
+- **System monitoring**: CPU, RAM and disk via psutil, SSH session and failure counts, anomaly alerts with configurable thresholds, optional hourly reports (`/alerts on`).
+- **File and image uploads**: send code, zip/tar archives and images to Claude with full context.
+- **Session export**: chat history as Markdown, JSON or HTML.
+- **Credential sanitizer**: Claude output is scrubbed for AWS keys, GitHub tokens, private key blocks and common secret patterns before delivery.
+- **Anti-spam notifications**: state-change-only alerts, 5-minute dedup windows, one startup message total.
+- **WSL watchdog**: a PowerShell watchdog restarts the bot if WSL or the process dies.
+- The bot talks to its users in Turkish (replies, command help, prompts); code, comments and docs are English.
 
-| What you get | Details |
-|:---|:---|
-| **Claude Agent SDK integration** | SDK-first with automatic CLI fallback; multi-turn agentic mode with configurable turn limits |
-| **Multi-user auth** | Invite-token system with admin / user / viewer roles and full audit log |
-| **SSH tunnel management** | ngrok lifecycle with health polling, auto-restart, retry limits, and admin alerts |
-| **System monitoring** | CPU, RAM, disk metrics via psutil; anomaly detection with configurable thresholds |
-| **File and image uploads** | Send code, archives (zip/tar), and images directly to Claude for analysis |
-| **Cost tracking** | Per-request cap plus a per-user daily cap, adjustable per user with `/limit` |
-| **Session export** | Export chat history as Markdown, JSON, or HTML |
-| **Credential sanitizer** | All Claude output is scrubbed for AWS keys, GitHub tokens, secrets before delivery |
-| **Anti-spam notifications** | State-change-only alerts, dedup windows, optional hourly reports |
-| **WSL watchdog** | PowerShell watchdog restarts the bot if WSL or the process dies |
+## Installation
 
----
-
-## Install
-
-**1. Create a Telegram bot**
-
-Message [@BotFather](https://t.me/BotFather) on Telegram, run `/newbot`, copy the token.
-Get your user ID from [@userinfobot](https://t.me/userinfobot).
-
-**2. Clone and configure**
+1. Create a Telegram bot: message [@BotFather](https://t.me/BotFather), run `/newbot`, copy the token. Get your user ID from [@userinfobot](https://t.me/userinfobot).
+2. Clone and configure:
 
 ```bash
 git clone https://github.com/sudohakan/Claude-Remote-Bot.git
-cd claude-remote-bot
-cp .env.example .env
-# Set TELEGRAM_BOT_TOKEN and ADMIN_TELEGRAM_ID
+cd Claude-Remote-Bot
+cp .env.example .env     # set TELEGRAM_BOT_TOKEN and ADMIN_TELEGRAM_ID
 ```
 
-**3. Install and start**
+3. Install and start:
 
 ```bash
 bash scripts/install.sh
@@ -63,30 +46,57 @@ bash scripts/install.sh
 
 The script installs dependencies, initializes SQLite, creates a systemd user service, and registers the Windows Task Scheduler watchdog.
 
-<details>
-<summary><strong>Manual install</strong></summary>
+Manual install:
 
 ```bash
 pip install -e .
 python3 -m src.main
 ```
 
-</details>
+### Configuration
 
-<details>
-<summary><strong>Development install</strong></summary>
+All settings load from `.env` (copy `.env.example`). Required: `TELEGRAM_BOT_TOKEN` (from BotFather) and `ADMIN_TELEGRAM_ID`.
 
-```bash
-pip install -e ".[dev]"
-pytest
-```
+| Variable | Default | Description |
+|---|:---:|---|
+| `ANTHROPIC_API_KEY` | none | API key. Falls back to the `claude` CLI if unset |
+| `CLAUDE_MODEL` | SDK default | Model override (any id the SDK accepts) |
+| `CLAUDE_MAX_TURNS` | `10` | Max agentic turns per request |
+| `CLAUDE_TIMEOUT_SECONDS` | `600` | Per-request timeout |
+| `CLAUDE_MAX_COST_PER_REQUEST` | `1.0` | Per-request cost cap (USD) |
+| `CLAUDE_MAX_COST_PER_USER` | `5.0` | Fallback daily cost cap per non-admin user (USD) |
+| `CLAUDE_DEFAULT_USER_COST_LIMIT` | none | Default daily cap for users without their own; negative means unlimited |
+| `CLAUDE_CLI_PATH` | `claude` on PATH | Path to the `claude` CLI |
+| `SESSION_TIMEOUT_HOURS` | `24` | Idle time before a Claude session is dropped |
+| `AGENTIC_MODE` | `true` | Multi-turn agentic execution |
+| `RATE_LIMIT_CLAUDE_PER_MIN` | `20` | Claude requests per minute per user |
+| `RATE_LIMIT_COMMANDS_PER_MIN` | `5` | Bot commands per minute per user |
+| `RATE_LIMIT_INVITES_PER_HOUR` | `3` | Invite tokens per hour |
+| `ENABLE_TUNNEL` | `false` | Enable the ngrok tunnel manager |
+| `NGROK_AUTHTOKEN` | none | ngrok auth token |
+| `SSH_PORT` | `22` | Local SSH port to expose |
+| `TUNNEL_POLL_INTERVAL_SECONDS` | `30` | Tunnel health check interval |
+| `TUNNEL_MAX_RETRIES` | `5` | Restart attempts before giving up |
+| `ENABLE_MONITOR` | `true` | Enable the metrics collector |
+| `MONITOR_COLLECT_INTERVAL_SECONDS` | `60` | Collection interval |
+| `HOURLY_REPORT_ENABLED` | `false` | Scheduled hourly reports |
+| `ALERT_CPU_PERCENT` | `90` | CPU alert threshold |
+| `ALERT_RAM_PERCENT` | `85` | RAM alert threshold |
+| `ALERT_DISK_PERCENT` | `90` | Disk alert threshold |
+| `ALERT_SSH_FAILURES_PER_MIN` | `5` | Failed SSH logins per minute before an alert |
+| `ENABLE_FILE_UPLOADS` | `true` | Allow file uploads to Claude |
+| `ENABLE_GIT_INTEGRATION` | `true` | Read-only git commands |
+| `ENABLE_API_SERVER` | `false` | Optional FastAPI HTTP server |
+| `API_SERVER_PORT` | `8080` | Port for the FastAPI server |
+| `ENABLE_VOICE_MESSAGES` | `false` | Voice message processing |
+| `ENABLE_QUICK_ACTIONS` | `true` | Context-aware inline buttons |
+| `DATABASE_URL` | `sqlite:///data/bot.db` | SQLite database |
+| `LOG_LEVEL` | `INFO` | Log level |
+| `DEBUG` | `false` | Debug mode |
 
-Includes: pytest, black, isort, flake8, mypy.
+## Usage
 
-</details>
-
-<details>
-<summary><strong>Service management</strong></summary>
+Service management:
 
 ```bash
 systemctl --user status claude-remote-bot
@@ -94,66 +104,10 @@ systemctl --user restart claude-remote-bot
 journalctl --user -u claude-remote-bot -f
 ```
 
-</details>
-
----
-
-## Language
-
-The bot talks to its users in Turkish: replies, command help and prompts are a Turkish UI. Code, comments and docs are English.
-
-## Features
-
-### Claude Integration
-
-SDK-first architecture with automatic CLI fallback. When `ANTHROPIC_API_KEY` is set, the bot uses the Claude Agent SDK directly. Otherwise, it shells out to the `claude` CLI. Multi-turn agentic mode is enabled by default with configurable turn limits and timeouts.
-
-### Multi-User Authentication
-
-Invite-token system: admin generates single-use tokens via `/invite`, users redeem with `/start <token>`. Three roles:
-
-| Role | Access |
-|:-----|:-------|
-| `admin` | Full control: user management, broadcasts, tunnel ops, system stats |
-| `user` | Chat with Claude, view status, manage own sessions, upload files |
-| `viewer` | Read-only: status, history |
-
-All commands are audit-logged to SQLite with timestamp, user ID, and action.
-
-### Cost Controls
-
-Two independent caps:
-- **Per-request**: a request stops once it exceeds `CLAUDE_MAX_COST_PER_REQUEST`
-- **Per-user daily**: a non-admin user is blocked for the rest of the day after spending their cap. The cap is the user's own value set with `/limit`, else `CLAUDE_DEFAULT_USER_COST_LIMIT`, else `CLAUDE_MAX_COST_PER_USER`; a negative value means unlimited. Admins are exempt.
-
-### System Monitoring
-
-psutil-based metrics collector with configurable thresholds:
-- CPU, RAM, disk usage with anomaly alerts
-- SSH session counting and failure rate tracking
-- Optional hourly reports (default off, enable via `/alerts on`)
-- State-change-only alerting: fires on transition, not while sustained
-
-### SSH Tunnel Management
-
-Full ngrok lifecycle: start, health polling, auto-restart on failure, configurable retry limits. Admin receives Telegram alerts on status transitions (up/down/retry-exhausted).
-
-### File and Image Processing
-
-Upload code files, zip/tar archives, and images directly in Telegram. The bot forwards them to Claude for analysis with full context.
-
-### Notification Anti-Spam
-
-Silent by default. State-change-only firing, 5-minute dedup windows, one startup message total (not one per module). Hourly reports are opt-in.
-
----
-
-## Usage
-
-### All Users
+### Commands for all users
 
 | Command | Description |
-|:--------|:------------|
+|---|---|
 | `/start [token]` | Start the bot or redeem an invite token |
 | `/help` | Show available commands |
 | `/ping` | Health check |
@@ -165,10 +119,10 @@ Silent by default. State-change-only firing, 5-minute dedup windows, one startup
 | `/cwd` | Current working directory |
 | `/remote` | Active remote-control sessions |
 
-### Admin Only
+### Admin commands
 
 | Command | Description |
-|:--------|:------------|
+|---|---|
 | `/invite` | Generate a single-use invite token |
 | `/users` | List all registered users |
 | `/promote <user_id>` | Promote a user to admin |
@@ -181,45 +135,52 @@ Silent by default. State-change-only firing, 5-minute dedup windows, one startup
 
 ### Optional integrations (owner only)
 
-These commands call external tools from the owner's own setup. Each one only works when its target exists; point them elsewhere with the variables below.
+These commands call external tools from the owner's own setup. Each one works only when its target exists; point them elsewhere with the variables below.
 
 | Command | Calls | Variable |
-|:--------|:------|:---------|
-| `/auto <task>` | Autonomy queue CLI: adds a one-shot job, `/auto durum <id>` shows its runs | `AUTONOMY_CLI` (default `~/.local/bin/auto`) |
+|---|---|---|
+| `/auto <task>` | Autonomy queue CLI: adds a one-shot job; a second form shows a job's runs by id | `AUTONOMY_CLI` (default `~/.local/bin/auto`) |
 | `/j <message>` | Relays a message to a leader agent session through its CLI | `JARVIS_CLI` (default `~/.local/bin/jarvis`) |
 | `/ack` | Acknowledges that agent's escalation so it stops repeating | `JARVIS_CLI` |
 | `/epic` | Runs a free-game claim script and sends a fresh link | `EPIC_CLAIM_SCRIPT`, `EPIC_CLAIM_PYTHON` |
 
-Approve / Reject buttons under an agent's approval request call `JARVIS_CLI approve|reject <id>`.
+Approve and Reject buttons under an agent's approval request call `JARVIS_CLI approve|reject <id>`.
 
----
+### Security
 
-## Architecture
+- **Invite-token auth**: no token, no access. Single-use, admin-generated.
+- **Role hierarchy**: admin > user > viewer, enforced in middleware.
+- **Audit log**: every command and Claude interaction is logged to SQLite.
+- **Rate limiting**: three independent sliding windows (Claude, commands, invites).
+- **Path safety**: git integration is limited to an approved directory allowlist; no traversal, no symlink escapes.
+- **Cost controls**: per-request and per-user daily caps, enforced mid-stream.
+
+### Development
+
+```bash
+pip install -e ".[dev]"
+pytest
+```
+
+Dev tools: pytest, black, isort, flake8, mypy. See [CONTRIBUTING.md](CONTRIBUTING.md) for full guidelines.
+
+## Project structure
 
 ```
-claude-remote-bot/
-├── src/
-│   ├── main.py                  # Entry point
-│   ├── bot/
-│   │   ├── handlers/            # Command, message, callback handlers
-│   │   ├── middleware/           # Auth and rate limiting middleware
-│   │   ├── features/            # File, image, voice, git, session export, quick actions
-│   │   ├── orchestrator.py      # Service wiring
-│   │   └── core.py              # Bot lifecycle
-│   ├── claude/                  # SDK + CLI bridge, session management, cost tracking
-│   ├── config/                  # Pydantic settings, feature flags
-│   ├── events/                  # Async typed event bus
-│   ├── monitor/                 # psutil collector, reporter, anomaly alerts
-│   ├── notifications/           # Rate-limited, dedup-aware delivery
-│   ├── security/                # Invite auth, rate limiter, path validator, audit log
-│   ├── storage/                 # SQLite (WAL mode) + repository pattern
-│   └── tunnel/                  # ngrok lifecycle manager + admin notifier
-├── tests/                       # test suite
-├── scripts/
-│   ├── install.sh               # Automated setup
-│   ├── run-bot.sh               # Run script
-│   └── wsl-watchdog.ps1         # Windows Task Scheduler watchdog
-└── pyproject.toml
+src/
+  main.py             entry point
+  bot/                handlers, middleware (auth, rate limiting), features, orchestrator, core
+  claude/             SDK + CLI bridge, session management, cost tracking
+  config/             Pydantic settings, feature flags
+  events/             async typed event bus
+  monitor/            psutil collector, reporter, anomaly alerts
+  notifications/      rate-limited, dedup-aware delivery
+  security/           invite auth, rate limiter, path validator, audit log
+  storage/            SQLite (WAL mode) + repository pattern
+  tunnel/             ngrok lifecycle manager + admin notifier
+tests/                test suite
+scripts/              install.sh, run-bot.sh, wsl-watchdog.ps1
+pyproject.toml
 ```
 
 ```mermaid
@@ -228,164 +189,33 @@ graph TB
         TG[Bot Handlers<br/>commands + messages + inline]
         MW[Middleware<br/>auth + rate limiting]
     end
-
     subgraph Core["Core Services"]
         CF[Claude Facade<br/>SDK + CLI bridge]
         SM[Session Manager<br/>multi-turn history]
         CT[Cost Tracker<br/>per-user spend]
         EB[Event Bus<br/>async typed events]
     end
-
     subgraph Optional["Optional Modules"]
         TM[Tunnel Manager<br/>ngrok lifecycle]
         MC[Metrics Collector<br/>CPU + RAM + disk]
         AM[Alert Manager<br/>anomaly detection]
         NS[Notification Service<br/>rate-limited delivery]
     end
-
     subgraph Storage["Persistence"]
         DB[(SQLite WAL<br/>users + sessions + audit)]
     end
-
-    TG --> MW
-    MW --> CF
+    TG --> MW --> CF
     CF --> SM
     CF --> CT
     CF --> EB
     EB --> TM
     EB --> MC
-    MC --> AM
-    AM --> NS
-    NS --> TG
+    MC --> AM --> NS --> TG
     Core --> DB
 ```
 
----
-
-## Configuration
-
-All settings loaded from `.env`. Copy `.env.example` to get started.
-
-### Required
-
-| Variable | Description |
-|:---------|:------------|
-| `TELEGRAM_BOT_TOKEN` | Bot token from [@BotFather](https://t.me/BotFather) |
-| `ADMIN_TELEGRAM_ID` | Your Telegram user ID |
-
-### Claude / Anthropic
-
-| Variable | Default | Description |
-|:---------|:-------:|:------------|
-| `ANTHROPIC_API_KEY` | -- | API key. Falls back to `claude` CLI if unset |
-| `CLAUDE_MODEL` | SDK default | Model override (any model id the SDK accepts, e.g. a `sonnet` alias) |
-| `CLAUDE_MAX_TURNS` | `10` | Max agentic turns per request |
-| `CLAUDE_TIMEOUT_SECONDS` | `600` | Per-request timeout |
-| `CLAUDE_MAX_COST_PER_USER` | `5.0` | Fallback daily cost cap per non-admin user (USD) |
-| `CLAUDE_DEFAULT_USER_COST_LIMIT` | -- | Default daily cap for users without their own; negative = unlimited |
-| `CLAUDE_CLI_PATH` | `claude` on PATH | Path to the `claude` CLI |
-| `SESSION_TIMEOUT_HOURS` | `24` | Idle time before a Claude session is dropped |
-| `CLAUDE_MAX_COST_PER_REQUEST` | `1.0` | Per-request cost cap (USD) |
-| `AGENTIC_MODE` | `true` | Multi-turn agentic execution |
-
-### Rate Limiting
-
-| Variable | Default | Description |
-|:---------|:-------:|:------------|
-| `RATE_LIMIT_CLAUDE_PER_MIN` | `20` | Claude requests per minute per user |
-| `RATE_LIMIT_COMMANDS_PER_MIN` | `5` | Bot commands per minute per user |
-| `RATE_LIMIT_INVITES_PER_HOUR` | `3` | Invite tokens per hour |
-
-### SSH Tunnel (ngrok)
-
-| Variable | Default | Description |
-|:---------|:-------:|:------------|
-| `ENABLE_TUNNEL` | `false` | Enable ngrok tunnel manager |
-| `NGROK_AUTHTOKEN` | -- | ngrok auth token |
-| `SSH_PORT` | `22` | Local SSH port to expose |
-| `TUNNEL_POLL_INTERVAL_SECONDS` | `30` | Health check interval |
-| `TUNNEL_MAX_RETRIES` | `5` | Restart attempts before giving up |
-
-### System Monitor
-
-| Variable | Default | Description |
-|:---------|:-------:|:------------|
-| `ENABLE_MONITOR` | `true` | Enable metrics collector |
-| `MONITOR_COLLECT_INTERVAL_SECONDS` | `60` | Collection interval |
-| `HOURLY_REPORT_ENABLED` | `false` | Scheduled hourly reports |
-| `ALERT_CPU_PERCENT` | `90` | CPU alert threshold |
-| `ALERT_RAM_PERCENT` | `85` | RAM alert threshold |
-| `ALERT_DISK_PERCENT` | `90` | Disk alert threshold |
-| `ALERT_SSH_FAILURES_PER_MIN` | `5` | Failed SSH logins per minute before an alert |
-
-### Feature Flags
-
-| Variable | Default | Description |
-|:---------|:-------:|:------------|
-| `ENABLE_FILE_UPLOADS` | `true` | Allow file uploads to Claude |
-| `ENABLE_GIT_INTEGRATION` | `true` | Read-only git commands |
-| `ENABLE_API_SERVER` | `false` | FastAPI HTTP server |
-| `ENABLE_VOICE_MESSAGES` | `false` | Voice message processing |
-| `ENABLE_QUICK_ACTIONS` | `true` | Context-aware inline buttons |
-
-### Storage and logging
-
-| Variable | Default | Description |
-|:---------|:-------:|:------------|
-| `DATABASE_URL` | `sqlite:///data/bot.db` | SQLite database |
-| `API_SERVER_PORT` | `8080` | Port for the optional FastAPI server |
-| `LOG_LEVEL` | `INFO` | Log level |
-| `DEBUG` | `false` | Debug mode |
-
----
-
-## Security
-
-- **Invite-token auth**: no token, no access. Single-use, admin-generated.
-- **Role hierarchy**: admin > user > viewer. Enforced at middleware level.
-- **Audit log**: every command and Claude interaction logged to SQLite.
-- **Rate limiting**: three independent sliding windows (Claude, commands, invites).
-- **Path safety**: git integration restricted to approved directory allowlist. No traversal, no symlink escapes.
-- **Credential sanitizer**: Claude output scrubbed for AWS keys, GitHub tokens, private key blocks, common secret patterns.
-- **Cost controls**: per-request and per-user monthly caps, enforced mid-stream.
-
----
-
-## Tech Stack
-
-| Component | Technology |
-|:----------|:-----------|
-| Runtime | Python 3.12+ |
-| Telegram | python-telegram-bot 22 (async, rate-limiter extras) |
-| AI | Claude Agent SDK + Anthropic API |
-| Database | SQLite (WAL mode) via aiosqlite |
-| Settings | Pydantic Settings + python-dotenv |
-| Monitoring | psutil |
-| HTTP server | FastAPI + Uvicorn (optional) |
-| Scheduling | APScheduler |
-| Logging | structlog |
-
----
-
-## Development
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for full guidelines.
-
-```bash
-git clone https://github.com/sudohakan/Claude-Remote-Bot.git
-cd claude-remote-bot
-pip install -e ".[dev]"
-pytest
-```
-
----
+Stack: Python 3.12+, python-telegram-bot 22, Claude Agent SDK, aiosqlite, Pydantic Settings, psutil, APScheduler, structlog, optional FastAPI + Uvicorn.
 
 ## License
 
-[MIT](LICENSE) — Copyright 2026 Hakan Topcu
-
-<div align="center">
-
-Built with Python  ·  Powered by [Claude Agent SDK](https://github.com/anthropics/claude-code)  ·  Delivered via [Telegram](https://telegram.org)
-
-</div>
+MIT, see [LICENSE](LICENSE).
