@@ -1,9 +1,11 @@
 """Message orchestrator — registers all handlers with the Application."""
 
+import asyncio
 from typing import Any, Dict
 
 import structlog
 from telegram import BotCommand, BotCommandScopeChat, BotCommandScopeDefault
+from telegram.error import NetworkError, TimedOut
 from telegram.ext import (
     Application,
     CallbackQueryHandler,
@@ -77,6 +79,33 @@ _ADMIN_EXTRA_COMMANDS = [
     BotCommand("ack", "Admin: Jarvis acil uyarısını onayla"),
     BotCommand("j", "Admin: Jarvis'e yaz"),
 ]
+
+
+COMMANDS_RETRY_ATTEMPTS = 5
+COMMANDS_RETRY_BASE_DELAY_S = 2.0
+
+
+async def _set_commands_with_retry(bot: Any, commands: Any, scope: Any) -> bool:
+    """set_my_commands with exponential backoff on TimedOut/NetworkError.
+
+    Returns False when every attempt failed: the menu is cosmetic, so startup
+    must continue instead of crashing and being restarted by pm2.
+    """
+    for attempt in range(1, COMMANDS_RETRY_ATTEMPTS + 1):
+        try:
+            await bot.set_my_commands(commands, scope=scope)
+            return True
+        except (TimedOut, NetworkError) as exc:
+            delay = COMMANDS_RETRY_BASE_DELAY_S * 2 ** (attempt - 1)
+            logger.warning(
+                "set_my_commands failed",
+                attempt=attempt,
+                error=str(exc),
+                retry_in=delay if attempt < COMMANDS_RETRY_ATTEMPTS else None,
+            )
+            if attempt < COMMANDS_RETRY_ATTEMPTS:
+                await asyncio.sleep(delay)
+    return False
 
 
 class BotOrchestrator:
@@ -160,8 +189,8 @@ class BotOrchestrator:
           their own chat scope.
         """
         # Default (every user)
-        await app.bot.set_my_commands(
-            _USER_BOT_COMMANDS, scope=BotCommandScopeDefault()
+        await _set_commands_with_retry(
+            app.bot, _USER_BOT_COMMANDS, BotCommandScopeDefault()
         )
 
         # Admin scopes: bootstrap admin + any DB role='admin' user
@@ -181,8 +210,8 @@ class BotOrchestrator:
         admin_commands = _USER_BOT_COMMANDS + _ADMIN_EXTRA_COMMANDS
         for chat_id in admin_ids:
             try:
-                await app.bot.set_my_commands(
-                    admin_commands, scope=BotCommandScopeChat(chat_id=chat_id)
+                await _set_commands_with_retry(
+                    app.bot, admin_commands, BotCommandScopeChat(chat_id=chat_id)
                 )
             except Exception as exc:
                 logger.warning(
