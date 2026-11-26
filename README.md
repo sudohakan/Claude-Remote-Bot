@@ -144,8 +144,6 @@ These commands call external tools from the owner's own setup. Each one works on
 | `/ack` | Acknowledges that agent's escalation so it stops repeating | `JARVIS_CLI` |
 | `/epic` | Runs a free-game claim script and sends a fresh link | `EPIC_CLAIM_SCRIPT`, `EPIC_CLAIM_PYTHON` |
 
-Approve and Reject buttons under an agent's approval request call `JARVIS_CLI approve|reject <id>`.
-
 ### Security
 
 - **Invite-token auth**: no token, no access. Single-use, admin-generated.
